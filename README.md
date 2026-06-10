@@ -7,6 +7,11 @@ ready-to-paste processor code — no programming required. Built for players, no
 
 ## What's inside
 
+- **Describe It** — type what you want in plain words ("make my monos mine titanium",
+  "turn off the reactor when cryofluid gets low") and get ready-to-paste code, a
+  step-by-step setup guide, and a plain-language explanation of every part. The parser
+  runs entirely in your browser — no AI service, no account, no cost. Tap the amber
+  chips to correct anything it misread.
 - **Template wizard** — 10 battle-tested templates (unit mining, turret ammo courier,
   reactor safety cutoff, enemy alarm, automatic gates, power saver, wave countdown,
   item flow control, resource monitors, display status bars). Fill in a friendly form,
@@ -28,15 +33,12 @@ npm install
 npm run dev      # → http://localhost:5173
 ```
 
-Static build (host anywhere, including GitHub Pages, or open from disk):
+Static build (optional — host anywhere or open from disk):
 
 ```bash
 npm run build    # outputs dist/ — relative paths, works from any static host
 npm run preview  # serve the build locally
 ```
-
-To publish on GitHub Pages: build, then serve the `dist/` folder from your Pages branch —
-no configuration needed (the app uses hash routing and relative asset paths).
 
 ## Using the generated code in Mindustry
 
@@ -63,9 +65,10 @@ with zero errors or warnings.
 ```
 src/mlog/       engine: spec data, IR, emitter, tokenizer, validator, preview VM
 src/graph/      node vocabulary + graph→IR compiler + auto-layout
-src/templates/  the wizard templates (graph-based where possible)
-src/pages/      gallery, wizard, editor, validator, reference, display preview
-src/components/ code pane, param form, lints, display canvas, flow nodes
+src/templates/  the wizard templates (graph-based where possible) + explanations
+src/nl/         plain-English parser: lexicon, slot extraction, intents, corpus
+src/pages/      describe, gallery, wizard, editor, validator, reference, display
+src/components/ code pane, param form, chips, lints, display canvas, flow nodes
 ```
 
 The instruction spec in `src/mlog/spec/` is plain typed data verified against the

@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import GalleryPage from './pages/GalleryPage';
+import DescribePage from './pages/DescribePage';
 import WizardPage from './pages/WizardPage';
 import EditorPage from './pages/EditorPage';
 import ReferencePage from './pages/ReferencePage';
@@ -8,6 +9,7 @@ import DisplayPage from './pages/DisplayPage';
 
 const icon = {
   gallery: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+  describe: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 4l5 5-11 11H4v-5L15 4z"/><path d="M13 6l5 5"/></svg>,
   editor: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 6h6a3 3 0 0 1 3 3v6"/></svg>,
   reference: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
   validator: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>,
@@ -24,6 +26,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           ⚙ mlog Forge
           <small>Mindustry logic generator</small>
         </div>
+        <NavLink to="/describe" className={({ isActive }) => `navlink${isActive ? ' active' : ''}`}>{icon.describe} Describe It</NavLink>
         <NavLink to="/" end className={({ isActive }) => `navlink${isActive ? ' active' : ''}`}>{icon.gallery} Templates</NavLink>
         <NavLink to="/editor" className={({ isActive }) => `navlink${isActive ? ' active' : ''}`}>{icon.editor} Node Editor</NavLink>
         <NavLink to="/validator" className={({ isActive }) => `navlink${isActive ? ' active' : ''}`}>{icon.validator} Validator</NavLink>
@@ -46,6 +49,7 @@ export default function App() {
       <Shell>
         <Routes>
           <Route path="/" element={<GalleryPage />} />
+          <Route path="/describe" element={<DescribePage />} />
           <Route path="/wizard/:templateId" element={<WizardPage />} />
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/reference" element={<ReferencePage />} />

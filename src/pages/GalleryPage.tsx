@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { TEMPLATES } from '../templates';
 import type { TemplateCategory } from '../templates';
 
@@ -17,6 +17,9 @@ export default function GalleryPage() {
         Pick a goal, tweak a few options, and copy ready-to-paste <span className="mono">mlog</span> code —
         no programming required. Every template can also be opened in the node editor to see how it works.
       </p>
+      <Link to="/describe" className="chip goal" style={{ fontSize: 14.5 }}>
+        ✎ …or just describe what you want in plain words →
+      </Link>
       {CATEGORY_ORDER.map((category) => {
         const templates = TEMPLATES.filter((t) => t.category === category);
         if (templates.length === 0) return null;

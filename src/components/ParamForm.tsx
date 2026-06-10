@@ -1,7 +1,7 @@
 import type { Template, TemplateParam, ParamValues } from '../templates/types';
 import { ITEMS, LIQUIDS, UNITS } from '../mlog/spec';
 
-function optionsFor(param: TemplateParam): { value: string; label: string }[] {
+export function optionsFor(param: TemplateParam): { value: string; label: string }[] {
   switch (param.type) {
     case 'unitType': return UNITS.map((u) => ({ value: `@${u.name}`, label: u.label }));
     case 'itemType': return ITEMS.map((i) => ({ value: `@${i.name}`, label: i.label }));
