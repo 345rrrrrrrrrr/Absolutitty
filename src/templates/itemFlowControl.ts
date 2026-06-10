@@ -1,4 +1,4 @@
-import type { Template } from './types';
+import { plain, type Template } from './types';
 import { GraphBuilder } from './graphBuilder';
 
 export const itemFlowControl: Template = {
@@ -19,6 +19,13 @@ export const itemFlowControl: Template = {
     'Link the processor to the storage block and to the conveyor/unloader feeding it.',
     'Paste the code into the processor.',
   ],
+  explain(values) {
+    return [
+      { title: 'Watch the stock', body: `The processor keeps an eye on how much ${plain(values.item)} is inside ${values.storage}.` },
+      { title: 'Full enough → pause', body: `When stock reaches ${values.stopAt}, ${values.feeder} is switched off so nothing overflows down the line.` },
+      { title: 'Running low → resume', body: `When stock falls below ${values.startAt}, ${values.feeder} switches back on. The gap between the two numbers prevents rapid on/off flapping.` },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const start = g.node('start');

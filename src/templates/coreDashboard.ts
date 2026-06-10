@@ -1,4 +1,4 @@
-import type { Template } from './types';
+import { plain, type Template } from './types';
 import { GraphBuilder } from './graphBuilder';
 
 export const coreDashboard: Template = {
@@ -18,6 +18,12 @@ export const coreDashboard: Template = {
     'Link the processor to the storage block AND to a Message block.',
     'Paste the code into the processor.',
   ],
+  explain(values) {
+    return [
+      { title: 'Read the storage', body: `Each loop, the processor asks ${values.source} how much ${plain(values.item1)}, ${plain(values.item2)} and ${plain(values.item3)} it currently holds.` },
+      { title: 'Print the numbers', body: 'The three live amounts are written onto the linked message block, with a gold header. The text refreshes continuously, so it is always current.' },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const start = g.node('start');

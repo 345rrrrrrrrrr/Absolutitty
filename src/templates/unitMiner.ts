@@ -1,4 +1,4 @@
-import type { Template } from './types';
+import { plain, type Template } from './types';
 import { IRBuilder, v, n, s, at, kw } from '../mlog/ir';
 
 export const unitMiner: Template = {
@@ -19,6 +19,14 @@ export const unitMiner: Template = {
     'Optionally link a Message block for status.',
     'Paste the code. Every unit of the chosen type gets put to work automatically.',
   ],
+  explain(values) {
+    return [
+      { title: 'Grab a unit', body: `The processor binds the next ${plain(values.unitType)} on the map. Every loop it moves on to the next one, so ALL your ${plain(values.unitType)}s end up working.` },
+      { title: 'Claim it politely', body: `Fresh units get marked with flag ${values.flag}. Units carrying a different flag belong to another processor and are skipped — two miners will never fight over the same unit (give each processor its own flag number).` },
+      { title: 'Mine until full', body: `The unit flies to the nearest ${plain(values.ore)} deposit and digs until its pockets are full.` },
+      { title: 'Deliver and repeat', body: 'When full, it flies home, drops everything into your core, and heads straight back to the deposit. Forever.' },
+    ];
+  },
   buildIR(values) {
     const unitType = String(values.unitType);
     const ore = String(values.ore);

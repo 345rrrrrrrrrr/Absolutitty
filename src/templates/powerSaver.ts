@@ -18,6 +18,13 @@ export const powerSaver: Template = {
     'Link the processor to the battery and to the block you want to manage.',
     'Paste the code into the processor.',
   ],
+  explain(values) {
+    return [
+      { title: 'Check the battery', body: `The processor reads how much energy ${values.battery} holds versus its capacity and converts that to a percentage.` },
+      { title: 'Emergency cut', body: `If charge drops below ${values.offBelow}%, ${values.consumer} is switched off so essentials (like turrets) keep their power.` },
+      { title: 'Recovery', body: `Only once charge climbs back above ${values.onAbove}% does ${values.consumer} switch on again. The gap between the two thresholds stops it flickering on and off.` },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const start = g.node('start');

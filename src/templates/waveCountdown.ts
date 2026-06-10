@@ -15,6 +15,12 @@ export const waveCountdown: Template = {
     'Link it to a Message block.',
     'Paste the code into the processor.',
   ],
+  explain(values) {
+    return [
+      { title: 'Read the clock', body: 'The processor reads the built-in wave number and the seconds remaining until the next wave.' },
+      { title: 'Show the countdown', body: `The message block shows the current wave and a live countdown. When fewer than ${values.warnBelow} seconds remain, it switches to a red "WAVE INCOMING" warning so you have time to get back to your defenses.` },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const start = g.node('start');

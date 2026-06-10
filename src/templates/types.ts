@@ -28,6 +28,14 @@ export type TemplateCategory =
   | 'Logistics'
   | 'Displays & Info';
 
+export interface ExplainSection {
+  title: string;
+  body: string;
+}
+
+/** "@copper" → "copper" — for interpolating values into explanations */
+export const plain = (value: unknown): string => String(value).replace(/^@/, '');
+
 export interface Template {
   id: string;
   name: string;
@@ -41,4 +49,6 @@ export interface Template {
   buildGraph?(values: ParamValues): GraphDoc;
   /** for hand-tuned mlog beyond the node vocabulary */
   buildIR?(values: ParamValues): IRProgram;
+  /** friendly walkthrough of what the generated code does, with values interpolated */
+  explain?(values: ParamValues): ExplainSection[];
 }

@@ -1,4 +1,4 @@
-import type { Template } from './types';
+import { plain, type Template } from './types';
 import { GraphBuilder } from './graphBuilder';
 
 export const displayDashboard: Template = {
@@ -18,6 +18,13 @@ export const displayDashboard: Template = {
     'Link the processor to both.',
     'Paste the code — the display shows a labeled fill bar.',
   ],
+  explain(values) {
+    return [
+      { title: 'Measure the stock', body: `The processor reads how much ${plain(values.item)} is in ${values.storage} and works out how full that is, treating ${values.capacity} as 100%.` },
+      { title: 'Draw the bar', body: `It paints an amber bar on ${values.display} whose width matches the fill level, plus a frame and the item's icon above it.` },
+      { title: 'Live updates', body: 'The drawing is refreshed every loop, so the bar rises and falls with your actual stock — visible from right across the map.' },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const start = g.node('start');

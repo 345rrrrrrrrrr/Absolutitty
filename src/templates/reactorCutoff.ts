@@ -1,4 +1,4 @@
-import type { Template } from './types';
+import { plain, type Template } from './types';
 import { GraphBuilder } from './graphBuilder';
 
 export const reactorCutoff: Template = {
@@ -19,6 +19,14 @@ export const reactorCutoff: Template = {
     'Optionally link a Message block for a status readout.',
     'Paste the code: edit the processor → Import from clipboard.',
   ],
+  explain(values) {
+    return [
+      { title: 'Watch the coolant', body: `Every loop, the processor reads how much ${plain(values.liquid)} is inside ${values.reactor}.` },
+      { title: 'Decide on/off', body: `If the coolant is above ${values.threshold}, the reactor is allowed to run. The moment it drops to ${values.threshold} or below, the reactor is switched off — long before it can melt down.` },
+      ...(values.message ? [{ title: 'Status readout', body: 'A linked message block shows whether the reactor is running and the current coolant level.' }] : []),
+      { title: 'Fully automatic', body: 'When coolant refills, the reactor switches back on by itself. No clicks needed.' },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const start = g.node('start');

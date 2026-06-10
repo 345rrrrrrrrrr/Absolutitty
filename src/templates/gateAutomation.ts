@@ -17,6 +17,13 @@ export const gateAutomation: Template = {
     'Paste the code into the processor.',
     'Tip: link extra doors and duplicate the Control nodes in the editor for multi-door gates.',
   ],
+  explain(values) {
+    return [
+      { title: 'Watch the approach', body: `The radar scans around ${values.turret} for enemies (the turret's range is the trigger distance).` },
+      { title: 'Enemies near → close', body: `If anything hostile is in range, ${values.door} is forced shut so nothing slips through.` },
+      { title: 'Safe → open', body: `As soon as the area is clear, ${values.door} opens again so your own units can pass freely.` },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const start = g.node('start');

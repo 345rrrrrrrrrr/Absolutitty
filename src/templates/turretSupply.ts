@@ -1,4 +1,4 @@
-import type { Template } from './types';
+import { plain, type Template } from './types';
 import { IRBuilder, v, n, at, kw } from '../mlog/ir';
 
 export const turretSupply: Template = {
@@ -20,6 +20,14 @@ export const turretSupply: Template = {
     'Make sure at least one courier unit exists (e.g. a Flare).',
     'Paste the code. The courier waits near the core and refills the turret as needed.',
   ],
+  explain(values) {
+    return [
+      { title: 'Hire a courier', body: `The processor binds a ${plain(values.unitType)} and marks it with flag ${values.flag} so no other processor steals it.` },
+      { title: 'Watch the turret', body: `It checks how much ${plain(values.item)} is inside ${values.turret}. While there's more than ${values.minAmmo}, the courier just waits — no wasted trips.` },
+      { title: 'Fetch from the core', body: `When ammo runs low, the courier flies to your core, waits until it's actually close enough, and picks up a load of ${plain(values.item)}.` },
+      { title: 'Deliver', body: `It carries the load back to ${values.turret} and drops everything in. Then back to watching.` },
+    ];
+  },
   buildIR(values) {
     const unitType = String(values.unitType);
     const turret = String(values.turret);

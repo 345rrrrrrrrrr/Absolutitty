@@ -22,6 +22,14 @@ export const enemyAlarm: Template = {
     'Link the processor to the turret, an Illuminator (or Switch), and a Message block.',
     'Paste the code into the processor.',
   ],
+  explain(values) {
+    const what = values.filter === 'any' ? 'any enemy' : `${values.filter} enemies`;
+    return [
+      { title: 'Scan for trouble', body: `Every loop, the radar checks the area around ${values.turret} for ${what}. The search range equals the turret's own range.` },
+      { title: 'Sound the alarm', body: `The moment something hostile shows up, ${values.alarmBlock} switches on and the message block shows a red warning with the enemy's position.` },
+      { title: 'All clear', body: `When no enemies remain, the alarm switches off and the message changes back to "all clear" automatically.` },
+    ];
+  },
   buildGraph(values) {
     const g = new GraphBuilder();
     const filter = String(values.filter);
