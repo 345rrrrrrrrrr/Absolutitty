@@ -9,9 +9,12 @@ ready-to-paste processor code — no programming required. Built for players, no
 
 - **Describe It** — type what you want in plain words ("make my monos mine titanium",
   "turn off the reactor when cryofluid gets low") and get ready-to-paste code, a
-  step-by-step setup guide, and a plain-language explanation of every part. The parser
-  runs entirely in your browser — no AI service, no account, no cost. Tap the amber
-  chips to correct anything it misread.
+  step-by-step setup guide, and a plain-language explanation of every part. Two engines:
+  - **⚡ instant (offline)** — a built-in parser, free forever, no account. Tap the amber
+    chips to correct anything it misread.
+  - **✦ AI (Gemini)** — handles *any* request via Google's Gemini API. The AI is told to
+    use named jump labels (resolved to numeric targets deterministically), its output is
+    checked by the validator, and failed drafts get one automatic repair round.
 - **Template wizard** — 10 battle-tested templates (unit mining, turret ammo courier,
   reactor safety cutoff, enemy alarm, automatic gates, power saver, wave countdown,
   item flow control, resource monitors, display status bars). Fill in a friendly form,
@@ -32,6 +35,20 @@ ready-to-paste processor code — no programming required. Built for players, no
 npm install
 npm run dev      # → http://localhost:5173
 ```
+
+### AI mode setup (optional)
+
+The ✦ AI mode needs a Gemini API key (free tier available at
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey)). Two ways to provide it:
+
+- **In the app**: Describe It → ✦ AI → "⚙ API key" — stored only in your browser's
+  localStorage, sent only to Google.
+- **For local dev**: create a `.env.local` file (gitignored — **never commit your key**,
+  this repo is public):
+
+  ```
+  VITE_GEMINI_API_KEY=your-key-here
+  ```
 
 Static build (optional — host anywhere or open from disk):
 
