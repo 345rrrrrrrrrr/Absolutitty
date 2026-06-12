@@ -3,7 +3,7 @@
 // never hardcoded, since this repo is public.
 
 import { validate, type Lint } from '../mlog/validator';
-import { resolveLabels } from '../mlog/labels';
+import { resolveLabels, trimExtraArgs } from '../mlog/labels';
 import { INSTRUCTIONS, OPS, SENSOR_PROPS, BUILTIN_VARS } from '../mlog/spec';
 
 // primary model + fallback when Google reports overload/rate limits
@@ -26,8 +26,10 @@ export interface AIResult {
   setupSteps: string[];
   explanation: { title: string; body: string }[];
   lints: Lint[];
-  /** true when the first draft failed validation and was repaired */
-  repaired: boolean;
+  /** how many drafts it took (1 = clean first try) */
+  rounds: number;
+  /** whether the final logic self-review pass ran */
+  reviewed: boolean;
 }
 
 // Condensed mlog reference assembled from the spec data (single source of truth).
@@ -53,6 +55,7 @@ function buildReference(): string {
 const RULES = `STRICT RULES for the mlog you write:
 - Use ONLY instructions from the reference. One instruction per line. Max 1000 lines.
 - Write NO comment lines and NO blank lines in the code — plain instructions only (the explanation field covers the "why").
+- Write only the MEANINGFUL arguments for each instruction — do not pad with trailing zeros; the tool pads automatically.
 - For jumps, ALWAYS use named labels — NEVER numeric targets. Put "name:" alone on a line to mark a spot, then "jump name <condition> <a> <b>". Example:
   loop:
   sensor amount vault1 @copper
@@ -87,7 +90,7 @@ interface GeminiResponse {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function callGemini(apiKey: string, prompt: string): Promise<string> {
+async function callGemini(apiKey: string, prompt: string, thinkingBudget: number): Promise<string> {
   let lastError = '';
   // try the primary model hard (it writes much better mlog) before the lite fallback
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -98,7 +101,12 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+          // let the model reason before writing — slower, far fewer mistakes
+          thinkingConfig: { thinkingBudget },
+        },
       }),
     });
     const data = (await response.json()) as GeminiResponse;
@@ -129,7 +137,7 @@ export function parseAIResponse(text: string): Pick<AIResult, 'code' | 'setupSte
   }
   const code = parsed.code.trim().split('\n').map((line) => line.trim()).filter((line) => line !== '').join('\n');
   return {
-    code: resolveLabels(code),
+    code: trimExtraArgs(resolveLabels(code)),
     setupSteps: Array.isArray(parsed.setupSteps) ? parsed.setupSteps.map(String) : [],
     explanation: Array.isArray(parsed.explanation)
       ? parsed.explanation
@@ -139,9 +147,31 @@ export function parseAIResponse(text: string): Pick<AIResult, 'code' | 'setupSte
   };
 }
 
-export async function generateWithGemini(request: string, apiKey: string): Promise<AIResult> {
+const MAX_REPAIR_ROUNDS = 4;
+const THINKING_BUDGET = 8192;
+
+type Draft = Pick<AIResult, 'code' | 'setupSteps' | 'explanation'>;
+
+function lintScore(lints: Lint[]): number {
+  // errors dominate; warnings break ties
+  return lints.filter((l) => l.severity === 'error').length * 100
+    + lints.filter((l) => l.severity === 'warning').length;
+}
+
+function relevantLints(code: string): Lint[] {
+  return validate(code).filter((l) => l.severity !== 'hint');
+}
+
+export type ProgressFn = (status: string) => void;
+
+export async function generateWithGemini(
+  request: string,
+  apiKey: string,
+  onProgress: ProgressFn = () => {},
+): Promise<AIResult> {
   const base = [
-    'You are an expert Mindustry logic (mlog) programmer. Write a complete, correct mlog program for the player request below.',
+    'You are an expert Mindustry logic (mlog) programmer. Think carefully, then write a complete, correct mlog program for the player request below.',
+    'Before writing, reason through: what blocks must be linked, what the main loop does each tick, every jump target, and the edge cases (nothing found, null results, empty storage).',
     '',
     buildReference(),
     '',
@@ -152,29 +182,66 @@ export async function generateWithGemini(request: string, apiKey: string): Promi
     `PLAYER REQUEST: ${request}`,
   ].join('\n');
 
-  let result = parseAIResponse(await callGemini(apiKey, base));
-  let lints = validate(result.code).filter((l) => l.severity !== 'hint');
-  let repaired = false;
+  onProgress('thinking about your request…');
+  let best: Draft = parseAIResponse(await callGemini(apiKey, base, THINKING_BUDGET));
+  let bestLints = relevantLints(best.code);
+  let rounds = 1;
 
-  if (lints.some((l) => l.severity === 'error')) {
-    // one repair round: feed the linter output back
+  // fix-until-clean loop: keep going while problems remain, keep the best draft
+  while (lintScore(bestLints) > 0 && rounds <= MAX_REPAIR_ROUNDS) {
+    onProgress(`draft ${rounds} had ${bestLints.length} problem${bestLints.length === 1 ? '' : 's'} — rewriting (round ${rounds + 1})…`);
     const repairPrompt = [
       base,
       '',
-      'Your previous program had problems. Fix ALL of them and respond with the same JSON format.',
+      'Your previous program had problems found by a strict validator. Think about WHY each one happened, then rewrite the whole program fixed. Same JSON format.',
       'PREVIOUS PROGRAM:',
-      result.code,
-      'PROBLEMS:',
-      ...lints.map((l) => `line ${l.line}: [${l.severity}] ${l.message}`),
+      best.code,
+      'VALIDATOR PROBLEMS:',
+      ...bestLints.map((l) => `line ${l.line}: [${l.severity}] ${l.message}`),
     ].join('\n');
+    rounds++;
     try {
-      result = parseAIResponse(await callGemini(apiKey, repairPrompt));
-      lints = validate(result.code).filter((l) => l.severity !== 'hint');
-      repaired = true;
+      const candidate = parseAIResponse(await callGemini(apiKey, repairPrompt, THINKING_BUDGET));
+      const candidateLints = relevantLints(candidate.code);
+      if (lintScore(candidateLints) <= lintScore(bestLints)) {
+        best = candidate;
+        bestLints = candidateLints;
+      }
     } catch {
-      // keep the first draft if the repair round itself fails
+      break; // network/parse trouble mid-loop: keep the best draft we have
     }
   }
 
-  return { ...result, lints, repaired };
+  // final self-review: validator-clean code can still have logic bugs —
+  // ask the model to double-check the BEHAVIOR against the request
+  let reviewed = false;
+  if (lintScore(bestLints) === 0) {
+    onProgress('code is valid — double-checking the logic…');
+    const reviewPrompt = [
+      'You are reviewing a Mindustry mlog program. Check the LOGIC against the player request: does it actually do what was asked? Check every jump lands on the intended instruction, sensors read the right blocks, thresholds compare the right way, and the loop never gets stuck.',
+      'If you find logic bugs, respond with the corrected program. If it is correct, respond with the SAME program unchanged. Same JSON format as before:',
+      OUTPUT_SCHEMA,
+      '',
+      buildReference(),
+      '',
+      RULES,
+      '',
+      `PLAYER REQUEST: ${request}`,
+      'PROGRAM TO REVIEW:',
+      best.code,
+    ].join('\n');
+    try {
+      const reviewedDraft = parseAIResponse(await callGemini(apiKey, reviewPrompt, THINKING_BUDGET));
+      const reviewedLints = relevantLints(reviewedDraft.code);
+      if (lintScore(reviewedLints) === 0) {
+        best = reviewedDraft;
+        bestLints = reviewedLints;
+      }
+      reviewed = true;
+    } catch {
+      // review is best-effort; the draft is already validator-clean
+    }
+  }
+
+  return { ...best, lints: bestLints, rounds, reviewed };
 }

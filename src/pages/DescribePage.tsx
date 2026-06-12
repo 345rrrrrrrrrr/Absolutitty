@@ -31,6 +31,7 @@ export default function DescribePage() {
   const [aiResult, setAiResult] = useState<AIResult | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
 
   const navigate = useNavigate();
 
@@ -60,9 +61,10 @@ export default function DescribePage() {
     setLoading(true);
     setAiError(null);
     setAiResult(null);
+    setProgress('thinking about your request…');
     try {
       storeApiKey(apiKey);
-      setAiResult(await generateWithGemini(request, apiKey));
+      setAiResult(await generateWithGemini(request, apiKey, setProgress));
     } catch (error) {
       setAiError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -175,7 +177,11 @@ export default function DescribePage() {
       )}
       {mode === 'ai' && loading && (
         <div className="card" style={{ maxWidth: 760 }}>
-          <span className="muted">✦ Gemini is writing your program… this usually takes a few seconds.</span>
+          <span className="muted">✦ {progress}</span>
+          <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
+            Deep mode: the AI thinks first, the validator checks every draft, broken drafts get
+            rewritten, and the final code gets a logic review. Worth the wait.
+          </div>
         </div>
       )}
       {mode === 'ai' && aiResult && !loading && (
@@ -205,11 +211,15 @@ export default function DescribePage() {
             <CodePane code={aiResult.code} instructions={aiInstructionCount} title="AI-generated mlog" />
             <div style={{ marginTop: 10 }}>
               <LintList lints={aiResult.lints} />
-              {aiResult.repaired && aiResult.lints.length === 0 && (
-                <div className="muted" style={{ fontSize: 12.5 }}>
-                  note: the first draft had issues — it was automatically re-checked and fixed.
-                </div>
-              )}
+              <div className="row" style={{ marginTop: 4 }}>
+                <span className="badge">{aiResult.rounds} draft{aiResult.rounds === 1 ? '' : 's'}</span>
+                {aiResult.reviewed && <span className="badge ok">logic reviewed ✓</span>}
+                {aiResult.lints.length > 0 && (
+                  <span className="muted" style={{ fontSize: 12.5 }}>
+                    still imperfect after {aiResult.rounds} tries — tap generate to try a fresh approach
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

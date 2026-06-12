@@ -4,7 +4,7 @@
 import { tokenize, countInstructions, type TokenLine, type Token } from './tokenizer';
 import {
   INSTRUCTION_MAP, getVariant, MAX_INSTRUCTIONS, SENSOR_PROP_NAMES,
-  BUILTIN_VAR_NAMES, isKnownContent,
+  BUILTIN_VAR_NAMES, isKnownContent, UNITS, ITEMS, LIQUIDS,
   type InstructionSpec, type ArgSpec,
 } from './spec';
 
@@ -91,6 +91,12 @@ const ruleInstructions: Rule = (lines) => {
           lints.push({
             line: l.line, severity: 'error', rule: 'output-literal',
             message: `${name}'s "${argSpec.name}" must be a variable name to store the result in — not the value ${token.text}.`,
+          });
+        }
+        if (argSpec.kind === 'output' && token.text.startsWith('@')) {
+          lints.push({
+            line: l.line, severity: 'error', rule: 'output-builtin',
+            message: `${name}'s "${argSpec.name}" stores a result — it can't write into the built-in name ${token.text}. Use a plain variable like ${token.text.slice(1)}.`,
           });
         }
       }
@@ -205,7 +211,38 @@ const ruleNullChecks: Rule = (lines) => {
   return lints;
 };
 
+/** content names used bare where a @constant was clearly meant: `ubind poly` */
+const ruleMissingAt: Rule = (lines) => {
+  const lints: Lint[] = [];
+  const contentNames = new Set([
+    ...UNITS.map((u) => u.name),
+    ...ITEMS.map((i) => i.name),
+    ...LIQUIDS.map((l) => l.name),
+  ]);
+  for (const l of lines) {
+    if (l.index < 0) continue;
+    const name = l.tokens[0].text;
+    // positions that take content constants: ubind type; sensor property;
+    // control config value; ucontrol itemTake item
+    const checks: (Token | undefined)[] = [];
+    if (name === 'ubind') checks.push(l.tokens[1]);
+    if (name === 'sensor') checks.push(l.tokens[3]);
+    if (name === 'control' && l.tokens[1]?.text === 'config') checks.push(l.tokens[3]);
+    if (name === 'ucontrol' && l.tokens[1]?.text === 'itemTake') checks.push(l.tokens[3]);
+    for (const token of checks) {
+      if (token && !token.isString && contentNames.has(token.text)) {
+        lints.push({
+          line: l.line, severity: 'warning', rule: 'missing-at',
+          message: `"${token.text}" here is read as a variable (probably empty) — you most likely meant the game content @${token.text}.`,
+        });
+      }
+    }
+  }
+  return lints;
+};
+
 const RULES: Rule[] = [
+  ruleMissingAt,
   ruleInstructions,
   ruleJumpTargets,
   ruleFlushes,

@@ -81,3 +81,19 @@ describe('validator', () => {
     expect(rules(src)).toContain('too-long');
   });
 });
+
+describe('AI-mistake rules', () => {
+  it('errors when outputs write into @names', () => {
+    expect(rules('sensor @hp block1 @health')).toContain('output-builtin');
+    expect(rules('ulocate ore core true @copper @x @y found b\nset z found')).toContain('output-builtin');
+    expect(rules('sensor hp block1 @health')).not.toContain('output-builtin');
+  });
+
+  it('warns when content names are missing their @', () => {
+    expect(rules('ubind poly')).toContain('missing-at');
+    expect(rules('ubind @poly')).not.toContain('missing-at');
+    expect(rules('control config sorter1 titanium 0 0 0')).toContain('missing-at');
+    expect(rules('ucontrol itemTake core copper 50 0 0')).toContain('missing-at');
+    expect(rules('ubind myUnitVar')).not.toContain('missing-at');
+  });
+});

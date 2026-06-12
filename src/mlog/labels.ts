@@ -3,6 +3,24 @@
 // index arithmetic (the #1 source of broken jumps).
 
 import { tokenize } from './tokenizer';
+import { INSTRUCTION_MAP } from './spec';
+
+/** Trim surplus trailing args beyond the game's padded count (harmless in-game
+ *  but noisy) — AI models love adding one zero too many. */
+export function trimExtraArgs(source: string): string {
+  return source.split(/\r?\n/).map((line) => {
+    const trimmed = line.trim();
+    if (trimmed === '' || trimmed.startsWith('#')) return line;
+    const tokens = trimmed.split(/\s+/);
+    const spec = INSTRUCTION_MAP.get(tokens[0]);
+    if (!spec || trimmed.includes('"')) return line; // don't touch strings
+    const maxTokens = 1 + spec.paddedCount;
+    if (tokens.length <= maxTokens) return line;
+    // only drop pure-zero fillers, never meaningful values
+    while (tokens.length > maxTokens && tokens[tokens.length - 1] === '0') tokens.pop();
+    return tokens.join(' ');
+  }).join('\n');
+}
 
 export function resolveLabels(source: string): string {
   const lines = tokenize(source);
