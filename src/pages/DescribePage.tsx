@@ -7,7 +7,8 @@ import { getTemplate } from '../templates';
 import { generate, defaultValues } from '../templates/generate';
 import type { ParamValues } from '../templates/types';
 import type { MatchOutcome } from '../nl/types';
-import { generateWithGemini, getStoredApiKey, storeApiKey, type AIResult } from '../ai/gemini';
+import { getStoredApiKey, storeApiKey } from '../ai/key';
+import type { AIResult } from '../ai/gemini';
 import { tokenize, countInstructions } from '../mlog/tokenizer';
 import CodePane from '../components/CodePane';
 import LintList from '../components/LintList';
@@ -64,6 +65,8 @@ export default function DescribePage() {
     setProgress('thinking about your request…');
     try {
       storeApiKey(apiKey);
+      // lazy-load the AI + compiler bundle on first use
+      const { generateWithGemini } = await import('../ai/gemini');
       setAiResult(await generateWithGemini(request, apiKey, setProgress));
     } catch (error) {
       setAiError(error instanceof Error ? error.message : String(error));
@@ -212,6 +215,7 @@ export default function DescribePage() {
             <div style={{ marginTop: 10 }}>
               <LintList lints={aiResult.lints} />
               <div className="row" style={{ marginTop: 4 }}>
+                {aiResult.engine === 'compiler' && <span className="badge ok">compiler-built ✓</span>}
                 <span className="badge">{aiResult.rounds} draft{aiResult.rounds === 1 ? '' : 's'}</span>
                 {aiResult.reviewed && <span className="badge ok">logic reviewed ✓</span>}
                 {aiResult.lints.length > 0 && (
@@ -220,6 +224,17 @@ export default function DescribePage() {
                   </span>
                 )}
               </div>
+              {aiResult.source && (
+                <details style={{ marginTop: 10 }}>
+                  <summary className="muted" style={{ cursor: 'pointer', fontSize: 13 }}>
+                    view the high-level source the AI wrote (compiled with mlogjs)
+                  </summary>
+                  <pre className="mono" style={{
+                    background: '#14161a', border: '1px solid var(--border)', borderRadius: 8,
+                    padding: 12, fontSize: 12.5, overflowX: 'auto',
+                  }}>{aiResult.source}</pre>
+                </details>
+              )}
             </div>
           </div>
         </div>

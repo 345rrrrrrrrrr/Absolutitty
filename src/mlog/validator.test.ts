@@ -97,3 +97,20 @@ describe('AI-mistake rules', () => {
     expect(rules('ubind myUnitVar')).not.toContain('missing-at');
   });
 });
+
+describe('community-reported AI mistakes', () => {
+  it('accepts the short `jump N always` form', () => {
+    expect(rules('set x 1\njump 0 always')).not.toContain('arg-count');
+  });
+
+  it('errors on ulocate building with ally/enemy instead of true/false', () => {
+    expect(rules('ulocate building storage ally true sx sy found block\nset z found')).toContain('ulocate-enemy-arg');
+    expect(rules('ulocate building storage false @copper sx sy found block\nset z found')).not.toContain('ulocate-enemy-arg');
+  });
+
+  it('errors on itemDrop with an item type as the target', () => {
+    expect(rules('ucontrol itemDrop @silicon 50')).toContain('itemdrop-target');
+    expect(rules('ucontrol itemDrop @air 50')).not.toContain('itemdrop-target');
+    expect(rules('ucontrol itemDrop coreBlock 50')).not.toContain('itemdrop-target');
+  });
+});

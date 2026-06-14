@@ -61,9 +61,12 @@ const ruleInstructions: Rule = (lines) => {
     }
     if (resolved) {
       const { args, subOffset } = resolved;
-      const given = l.tokens.length - subOffset;
-      if (given < args.length) {
-        const missing = args.slice(given).map((a) => a.name).join(', ');
+      let given = l.tokens.length - subOffset;
+      let required = args;
+      // `jump N always` is valid without the a/b filler args
+      if (name === 'jump' && l.tokens[2]?.text === 'always') required = args.slice(0, 2);
+      if (given < required.length) {
+        const missing = required.slice(given).map((a) => a.name).join(', ');
         lints.push({
           line: l.line, severity: 'error', rule: 'arg-count',
           message: `${name} is missing arguments: ${missing}.`,
@@ -211,6 +214,37 @@ const ruleNullChecks: Rule = (lines) => {
   return lints;
 };
 
+/** mistakes the community caught in AI-written code */
+const ruleSemanticArgs: Rule = (lines) => {
+  const lints: Lint[] = [];
+  const itemLiquidNames = new Set([...ITEMS.map((i) => i.name), ...LIQUIDS.map((l) => l.name)]);
+  for (const l of lines) {
+    if (l.index < 0) continue;
+    const name = l.tokens[0].text;
+    // ulocate building's enemy slot takes true/false — "ally"/"enemy" are not keywords
+    if (name === 'ulocate' && l.tokens[1]?.text === 'building') {
+      const enemyArg = l.tokens[3]?.text;
+      if (enemyArg === 'ally' || enemyArg === 'enemy') {
+        lints.push({
+          line: l.line, severity: 'error', rule: 'ulocate-enemy-arg',
+          message: `ulocate's third argument is true (enemy buildings) or false (your own) — "${enemyArg}" is not a keyword and reads as an empty variable.`,
+        });
+      }
+    }
+    // ucontrol itemDrop takes a building (or @air), never an item type
+    if (name === 'ucontrol' && l.tokens[1]?.text === 'itemDrop') {
+      const to = l.tokens[2]?.text;
+      if (to && to.startsWith('@') && to !== '@air' && itemLiquidNames.has(to.slice(1))) {
+        lints.push({
+          line: l.line, severity: 'error', rule: 'itemdrop-target',
+          message: `itemDrop's first argument is the BUILDING to drop into (or @air to dump) — not the item ${to}. Units drop whatever they carry.`,
+        });
+      }
+    }
+  }
+  return lints;
+};
+
 /** content names used bare where a @constant was clearly meant: `ubind poly` */
 const ruleMissingAt: Rule = (lines) => {
   const lints: Lint[] = [];
@@ -242,6 +276,7 @@ const ruleMissingAt: Rule = (lines) => {
 };
 
 const RULES: Rule[] = [
+  ruleSemanticArgs,
   ruleMissingAt,
   ruleInstructions,
   ruleJumpTargets,
